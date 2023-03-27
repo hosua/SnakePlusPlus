@@ -1,2 +1,2 @@
 # SnakePlusPlus
-Snake Clone made with SDL2
+Snake Clone made with C++/SDL2
