@@ -70,7 +70,9 @@ int main(int argc, char *argv[]){
 		}
 
 		gfx->renderClear();
-		gfx->renderGrid();
+
+		// gfx->renderGrid(); // Render grey gridlines (might remove from final build)
+		
 		gfx->renderFood(*food);
 		gfx->renderSnake(*snake);
 
