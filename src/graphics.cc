@@ -35,7 +35,7 @@ void GFX::cleanQuit(bool success) const {
 	printf("Quitting, goodbye!\n");
 	
 	// Clean up fonts
-	for (TTF_Font* font : g_fonts)
+	for (TTF_Font* font : g_master->fonts)
 		TTF_CloseFont(font);
 	TTF_Quit();
 	
@@ -112,7 +112,7 @@ void GFX::renderText(std::string text, int x, int y,
 
 	SDL_Color color = hexToColor(hex_font_color);
 	SDL_SetRenderDrawColor(_renderer, color.r, color.g, color.b, 255);
-	SDL_Surface* surface = TTF_RenderText_Solid(g_fonts[font_type], text.c_str(), color);
+	SDL_Surface* surface = TTF_RenderText_Solid(g_master->fonts[font_type], text.c_str(), color);
 	SDL_Texture* texture = SDL_CreateTextureFromSurface(_renderer, surface);
 
 	SDL_Rect rect = {.x=x, .y=y, .w=surface->w, .h=surface->h};
@@ -180,32 +180,33 @@ void Button::handleEvents(SDL_Event* e){
 	if (inside){
 		_hex_currcolor = GREEN;
 		if (e->type == SDL_MOUSEBUTTONDOWN){
-			int level = getLevel();
+			int level = getDiff();
 			// negative numbers are reserved for pause menu actions
 			if (level < 0){	
+				// Cast int to PauseAction enum to make compiler happy
 				PauseAction pause_action = (PauseAction) level;
 				switch(pause_action){
 					case PA_RESUME:
-						g_is_paused = false;
+						g_master->is_paused = false;
 						break;
 					case PA_MAINMENU:
-						g_master_reset = true;
-						g_game_state = GS_MAINMENU;
+						g_master->reset = true;
+						g_master->gstate = GS_MAINMENU;
 						break;
 					case PA_QUIT:
-						g_is_running = false;
+						g_master->is_running = false;
 						break;
 				}
 			// level 0 is reserved for quit event,
 			} else if (level == 0){
 				// If level is 0, then handle quit event
 				std::cout << "Pressed quit button\n";
-				g_is_running = false;
+				g_master->is_running = false;
 			} else {
 				// Otherwise, set game level to button that was pressed and start the game
 				std::cout << "Started game on difficulty: " << getText() << "\n";
-				g_diff = level;
-				g_game_state = GS_INGAME;
+				g_master->diff = getDiff();
+				g_master->gstate = GS_INGAME;
 			}
 		}
 	} else {

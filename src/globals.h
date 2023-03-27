@@ -28,19 +28,6 @@
 #define FONT_SIZE_MED 60
 #define FONT_SIZE_LARGE 90
 
-// Global array to store font structs
-extern std::array<TTF_Font*, 3> g_fonts;
-
-// Enum used to index font in g_fonts array
-typedef enum FontType {
-	F_SMALL,
-	F_MED,
-	F_LARGE,
-} FontType;
-
-// Call this before doing anything with fonts or else
-void initFonts();
-
 // For grid to align, GRID_CELL_SIZE must divide evenly into both SCREEN_W and SCREEN_H
 #define SCREEN_W 1280
 #define SCREEN_H 720
@@ -60,17 +47,15 @@ void initFonts();
 #define RED 0xAD2300
 #define GREY 0x474747
 
-extern bool g_master_reset; // If true, game should handle resetting all objects (snake and food)
-extern bool g_is_running; // Program should immediately exit if this variable is false
-extern bool g_game_over; // Player lost, game should return to main menu
-extern bool g_is_paused; // Game is currently in progress, but paused
-						 
-void resetGlobals(); // Reset globals to original values (for resetting the game)
 
-extern int g_diff; // Game difficulty (1-10) (Lower == harder)
+#define NUM_FONTS 3 // Number of different fonts used
 
-// Returns true if the two SDL_Rect objects overlap
-bool checkCollision(SDL_Rect a, SDL_Rect b); 
+// Enums used to identify and index fonts in gm->fonts list
+typedef enum FontType {
+	F_SMALL,
+	F_MED,
+	F_LARGE,
+} FontType;
 
 SDL_Color hexToColor(unsigned long hex_color);
 
@@ -93,6 +78,30 @@ typedef enum PauseAction {
 	PA_QUIT = 0,
 } PauseAction;
 
-extern GameState g_game_state;
+// Encapsulate important game data into GameMaster
+struct GameMaster {
+	GameState gstate;
+	int diff; // Determines the length of each frame. Lower difficulty value == harder
+	bool reset; // If true, game should resett all objects (snake & food) and global variables
+	bool is_running; // Program should immediately exit if this variable is false
+	bool game_over; // Player lost, game should return to main menu
+	bool is_paused; // Game is currently running, but paused
+	
+	std::vector<TTF_Font*> fonts;
+
+	void resetGame(){ gstate = GS_MAINMENU; reset = game_over, is_paused = false; }
+
+	GameMaster(): gstate(GS_MAINMENU), reset(false), is_running(true), game_over(false), is_paused(false){}
+};
+
+extern std::shared_ptr<GameMaster> g_master; // Global game master
+						 
+void resetGame(GameMaster* gm); // Reset game master variables for new game
+
+// Call this before doing anything with fonts or else
+void initFonts();
+
+// Returns true if the two SDL_Rect objects overlap
+bool checkCollision(SDL_Rect a, SDL_Rect b); 
 
 #endif // GLOBALS_H

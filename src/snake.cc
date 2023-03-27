@@ -21,28 +21,28 @@ void Snake::handleMovement(){
 		case M_LEFT:
 			_head.x -= _dim;
 			if (_head.x < 0){ 
-				g_game_over = true;		
+				g_master->game_over = true;		
 				setBuffDir(M_RIGHT);
 			}
 			break;
 		case M_DOWN:
 			_head.y += _dim;
 			if (_head.y >= SCREEN_H){ 
-				g_game_over = true;		
+				g_master->game_over = true;		
 				setBuffDir(M_UP);
 			}
 			break;
 		case M_RIGHT:
 			_head.x += _dim;
 			if (_head.x >= SCREEN_W){ 
-				g_game_over = true;		
+				g_master->game_over = true;		
 				setBuffDir(M_LEFT);
 			}
 			break;
 		case M_UP:
 			_head.y -= _dim;
 			if (_head.y < 0){ 
-				g_game_over = true;		
+				g_master->game_over = true;		
 				setBuffDir(M_DOWN);
 			}
 			break;

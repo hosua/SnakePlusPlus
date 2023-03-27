@@ -12,7 +12,6 @@ Menu* pause_menu = nullptr;
 Button* quit_btn = nullptr;
 
 int main(int argc, char *argv[]){
-	// GameState g_game_state = GS_INGAME;
 	
 	srand(time(NULL));
 	
@@ -22,6 +21,8 @@ int main(int argc, char *argv[]){
 		fprintf(stderr, "Fatal error: Failed to initialize SDL: %s\n", SDL_GetError());
 		exit(EXIT_FAILURE);
 	}
+
+	g_master = std::shared_ptr<GameMaster>(new GameMaster());
 
 	initFonts();
 
@@ -36,15 +37,15 @@ int main(int argc, char *argv[]){
 
 	SDL_Rect prev; // Store position of head in the previous iteration
 	
-	while (g_is_running){
-		if (g_master_reset){
+	while (g_master->is_running){
+		if (g_master->reset){
 			snake->reset();
 			food->setRandPos();
-			resetGlobals();
-			g_master_reset = false;
+			g_master->resetGame();
+			g_master->reset = false;
 		}
 
-		switch(g_game_state){
+		switch(g_master->gstate){
 			case GS_MAINMENU:
 			{
 				// Initialize the main_menu if it is NULL
@@ -97,7 +98,7 @@ int main(int argc, char *argv[]){
 				SDL_Event event;
 				SDL_Rect* coll = nullptr;
 
-				if (g_is_paused){ // Game is paused, handle the pause menu
+				if (g_master->is_paused){ // Game is paused, handle the pause menu
 					while (SDL_PollEvent(&event)){
 						pause_menu->handleEvents(&event);
 						handlePauseInputs(gfx, event);
@@ -113,7 +114,7 @@ int main(int argc, char *argv[]){
 						handleIngameInputs(gfx, snake, event);
 
 					// All events in this if statement are considered the "game tick"
-					if (tick % g_diff == 0){
+					if (tick % g_master->diff == 0){
 						// If the snake ate the food
 						if (checkCollision(*snake->getHead(), food->getPos())){
 							snake->handleEatEvents(food);
@@ -124,12 +125,12 @@ int main(int argc, char *argv[]){
 
 						// If the snake collided with itself, then it's game over
 						if ((coll = snake->checkSnakeCollision())){
-							g_game_over = true;
+							g_master->game_over = true;
 							std::cout << "Snake ate itself\n";
 						}
 
 
-						if (g_game_over){
+						if (g_master->game_over){
 							if (snake->length() == 2)
 								std::cout << "Game over! Your snake died after eating 1 apple.\n";
 							else
@@ -139,8 +140,8 @@ int main(int argc, char *argv[]){
 							if (!coll)
 								coll = &prev;
 
-							g_game_state = GS_MAINMENU;
-							g_game_over = g_is_paused = false;
+							g_master->gstate = GS_MAINMENU;
+							g_master->game_over = g_master->is_paused = false;
 
 							gfx->renderFood(*food);
 							gfx->renderSnake(*snake);
@@ -165,7 +166,7 @@ int main(int argc, char *argv[]){
 				gfx->renderFood(*food);
 				gfx->renderSnake(*snake);
 
-				if (g_is_paused){
+				if (g_master->is_paused){
 					gfx->renderMenu(pause_menu);
 					gfx->renderText("Made by: Hoswoo",
 						(GRID_CELL_SIZE), (SCREEN_H-(GRID_CELL_SIZE*2)),
@@ -191,7 +192,7 @@ void handleIngameInputs(GFX* gfx, Snake* snake, SDL_Event event){
 	if (event.type == SDL_QUIT || 
 			(event.type == SDL_KEYDOWN && (event.key.keysym.sym == SDLK_ESCAPE || event.key.keysym.sym == SDLK_p))){
 		pause_menu = initPauseMenu();
-		g_is_paused = true;
+		g_master->is_paused = true;
 	}
 
 	switch(event.type){
@@ -218,7 +219,7 @@ void handlePauseInputs(GFX* gfx, SDL_Event event){
 	// If user presses ESC or P while paused, resume the game
 	if ((event.type == SDL_KEYDOWN && 
 			(event.key.keysym.sym == SDLK_ESCAPE || event.key.keysym.sym == SDLK_p)))
-		g_is_paused = false;
+		g_master->is_paused = false;
 }
 
 // Checks if game should quit in the menu

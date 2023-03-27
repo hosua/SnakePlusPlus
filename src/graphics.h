@@ -56,7 +56,7 @@ public:
 	unsigned long getBgColor(){ return _hex_bgcolor; }
 	unsigned long getFontColor(){ return _hex_fontcolor; }
 	unsigned long getCurrColor(){ return _hex_currcolor; }
-	int getLevel(){ return _level; }
+	int getDiff(){ return _level; }
 
 	std::pair<float, float> getOffset(){ return std::make_pair(_x_offset, _y_offset); }
 	FontType getFontType(){ return _font_type; }
