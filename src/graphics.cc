@@ -80,12 +80,17 @@ void GFX::renderSnake(Snake snake) const {
 	}
 }
 
-// Renders a red square where the collision occurred
+// Renders a red square where the collision occurred and a game over message
 void GFX::renderGameover(SDL_Rect pos) const {
 	SDL_Color color = hexToColor(RED);
 	SDL_SetRenderDrawColor(_renderer, color.r, color.g, color.b, 255);
 	SDL_RenderFillRect(_renderer, &pos);
-	SDL_RenderPresent(_renderer);
+
+	renderText("Game over!",
+		(SCREEN_W/3) + (GRID_CELL_SIZE*5), (GRID_CELL_SIZE*10),
+		WHITE, F_MED
+	);
+	// SDL_RenderPresent(_renderer);
 }
 
 // Also limits FPS
