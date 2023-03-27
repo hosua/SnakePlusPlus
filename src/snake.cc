@@ -21,40 +21,39 @@ void Snake::handleMovement(){
 		case M_LEFT:
 			_head.x -= _dim;
 			if (_head.x < 0){ 
-				game_over = true;		
+				g_game_over = true;		
 				setBuffDir(M_RIGHT);
 			}
 			break;
 		case M_DOWN:
 			_head.y += _dim;
 			if (_head.y >= SCREEN_H){ 
-				game_over = true;		
+				g_game_over = true;		
 				setBuffDir(M_UP);
 			}
 			break;
 		case M_RIGHT:
 			_head.x += _dim;
 			if (_head.x >= SCREEN_W){ 
-				game_over = true;		
+				g_game_over = true;		
 				setBuffDir(M_LEFT);
 			}
 			break;
 		case M_UP:
 			_head.y -= _dim;
 			if (_head.y < 0){ 
-				game_over = true;		
+				g_game_over = true;		
 				setBuffDir(M_DOWN);
 			}
 			break;
 	}
 
  	if (_length >= 2){
-		// Using vector (less efficient, each rotation is O(N)
+		// Using vector (less efficient, each rotation is O(N))
 		// std::rotate(_body.begin(), _body.begin()+1, _body.end());
 		// _body.back() = prev;	
 	
 		// Using deque (more efficient, each push/pop is O(1))
-		SDL_Rect back = _body.back();
 		_body.pop_back();
 		_body.push_front(prev);
 	} 
@@ -103,7 +102,7 @@ void Snake::setBuffDir(MoveDir new_dir){
 }
 
 SDL_Rect* Snake::checkSnakeCollision(){ // Returns NULL if no collision, check's collision of snake head and its body
-	for (int i = 1; i < _body.size(); i++)
+	for (size_t i = 0; i < _body.size(); i++)
 		if (checkCollision(_head, _body.at(i)))
 			return &_body.at(i);
 	return nullptr;
@@ -111,15 +110,12 @@ SDL_Rect* Snake::checkSnakeCollision(){ // Returns NULL if no collision, check's
 
 bool Snake::collidesWithFood(Food food){
 	// Return true if food collides with snake's head
-	if (checkCollision(_head, food.getPos())){
-		std::cout << "Food collided with head\n";
+	if (checkCollision(_head, food.getPos()))
 		return true;
-	}
 	// Return true if food collides with any part of the body
 	for (SDL_Rect rect : _body)
-		if (checkCollision(rect, food.getPos())){
-			std::cout << "Food collided with body\n";
+		if (checkCollision(rect, food.getPos()))
 			return true;
-		}
+	// Otherwise, no collision occurred
 	return false;
 }

@@ -1,5 +1,5 @@
 # SnakePlusPlus
-Snake Clone made with C++/SDL2
+Snake clone made with C++ and SDL2.
 
-![snake](img/snake.gif)
+![snake](img/snake-01.gif)
 

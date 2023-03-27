@@ -15,25 +15,31 @@ public:
 
 	// The buffer to store snake direction between game ticks
 	void setBuffDir(MoveDir new_dir);
-	// Snake's real dir should only update during game tick
+	// Snake's real direction, should only update during game tick
 	void updateDir(){ _dir = _buff_dir; }
 	void reset();
 	void handleEatEvents(Food* food); // handle events that trigger after eating food 
 	
-	SDL_Rect* checkSnakeCollision(); // Returns nullptr if no collision occurred
-	void printInfo();
+	// Checks if snake's head collided with any parts of its body. 
+	// Returns nullptr upon no collision. Otherwise, returns a rect containing the position of the collision
+	SDL_Rect* checkSnakeCollision(); 
 
-	bool collidesWithFood(Food food);
+	void printInfo(); // For debugging purposes
+
+	// Returns true if any part of the snake's head/body collides with food.
+	// Used to respawn food again if the food happens to spawn on top of the snake
+	bool collidesWithFood(Food food); 
 
 	std::deque<SDL_Rect> getBody(){ return _body; }
 	size_t length(){ return _length; } // Get length of snake
+	size_t size(){ return _length; } // Same as length()
 	SDL_Rect* getHead(){ return &_head; } // Get snake's head rect
 	SDL_Color getColor(){ return _color; } // Get color of snake
 	
 private:
 
 	int _length; // length of snake
-	int _dim; // dimensions of snake 
+	int _dim; // dimensions of snake (cell is square, so only one parameter for width/height is needed)
 	MoveDir _buff_dir; // Buffer direction (To store snake's direction in between frames)
 	MoveDir _dir; // Actual direction (The direction that the snake will actually travel too during game tick
 	SDL_Rect _head; // position of snake head 

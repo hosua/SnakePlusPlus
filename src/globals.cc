@@ -1,5 +1,15 @@
 #include "globals.h"
-bool game_over = false;
+
+bool g_is_running = true;
+bool g_master_reset = false;
+bool g_game_over = false;
+bool g_is_paused = false;
+
+GameState g_game_state = GS_MAINMENU;
+
+void resetGlobals(){ g_master_reset = g_game_over = g_is_paused = false; }
+
+int g_diff = 5;
 
 // Convert hexademical # to SDL_Color struct 
 SDL_Color hexToColor(unsigned long hex_color){
@@ -7,6 +17,7 @@ SDL_Color hexToColor(unsigned long hex_color){
 	color.r = ((hex_color >> 16) & 0xFF); // Extract first two bytes
 	color.g = ((hex_color >> 8) & 0xFF); // Extract middle two bytes
 	color.b = ((hex_color) & 0xFF); // Extract last two bytes
+	color.a = 255;
 	return color;
 }
 
@@ -32,4 +43,17 @@ bool checkCollision(SDL_Rect a, SDL_Rect b){
 
 }
 
+std::array<TTF_Font*, 3> g_fonts;
 
+void initFonts(){
+	TTF_Init(); // Must always be called before using SDL_ttf API
+	
+	g_fonts[0] = TTF_OpenFont(FONT_PATH, FONT_SIZE_SMALL);
+	g_fonts[1] = TTF_OpenFont(FONT_PATH, FONT_SIZE_MED);
+	g_fonts[2] = TTF_OpenFont(FONT_PATH, FONT_SIZE_LARGE);
+
+	if (!g_fonts[0] || !g_fonts[1] || !g_fonts[2]){
+		std::cerr << "Fatal Error: Font file \"" << FONT_PATH << "\" could not be found.\n";
+		g_is_running = false;
+	}
+}
