@@ -240,7 +240,8 @@ Menu::Menu(std::vector<std::string> text, std::vector<int> levels,
 			hex_btncolor,
 			text[i], font_type, BLACK,
 			x_offset, y_offset,
-			levels[i]);
+			levels[i]
+		);
 
 		_buttons.push_back(button);
 		if (++c == ncols){
@@ -256,6 +257,8 @@ Menu::Menu(std::vector<std::string> text, std::vector<int> levels,
 Button::~Button(){ /* Nothing here needs to explicitly be deleted */ }
 
 Menu::~Menu(){
+	if (_bgrect)
+		delete(_bgrect);
 	for (Button* btn : _buttons)
 		delete(btn);
 }
@@ -287,7 +290,7 @@ Menu* initMainMenu(){
 	);
 
 	// Add colored frame to menu bg
-	main_menu->setBackground(SKY_BLUE, GRID_CELL_SIZE*2.5f);
+	main_menu->setBackground(SKY_BLUE, GRID_CELL_SIZE*2.5f); // This needs to be freed
 	return main_menu;
 }
 

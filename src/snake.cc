@@ -11,6 +11,7 @@ void Food::setRandPos(){
 
 void Snake::reset(){
 	_head.x = SCREEN_W/2; _head.y = SCREEN_H/2;
+	_body.clear();
 	_length = 1;
 }
 
