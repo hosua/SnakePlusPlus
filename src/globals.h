@@ -20,13 +20,7 @@
 #include <chrono> // timing
 #include <thread>
 
-
-// Font stuff
-#define FONT_PATH "assets/fonts/pixel-letters.ttf"
-
-#define FONT_SIZE_SMALL 30
-#define FONT_SIZE_MED 60
-#define FONT_SIZE_LARGE 90
+#define GAME_VERSION "v0.0.2"
 
 // For grid to align, GRID_CELL_SIZE must divide evenly into both SCREEN_W and SCREEN_H
 #define SCREEN_W 1280
@@ -34,9 +28,9 @@
 #define GRID_CELL_SIZE 20
 // #define GRID_CELL_SIZE 40
 
-#define INPUT_CD 60 // Input cooldown (prevents multiple direction changes in a single tick)
-
 #define FPS 60
+
+#define CD_LENGTH 3 // # of seconds that will elapse before game starts/resumes
 
 // Colors 
 #define BLACK 0x000000
@@ -47,6 +41,12 @@
 #define RED 0xAD2300
 #define GREY 0x474747
 
+// Font stuff
+#define FONT_PATH "assets/fonts/pixel-letters.ttf"
+
+#define FONT_SIZE_SMALL 30
+#define FONT_SIZE_MED 60
+#define FONT_SIZE_LARGE 90
 
 #define NUM_FONTS 3 // Number of different fonts used
 
@@ -86,12 +86,14 @@ struct GameMaster {
 	bool is_running; // Program should immediately exit if this variable is false
 	bool game_over; // Player lost, game should return to main menu
 	bool is_paused; // Game is currently running, but paused
-	
+	bool cd_started; // Indicate the cooldown is starting
+	int cd_counter; // Keeps track of how many seconds remain before gameplay resumes/starts
 	std::vector<TTF_Font*> fonts;
 
 	void resetGame(){ gstate = GS_MAINMENU; reset = game_over, is_paused = false; }
 
-	GameMaster(): gstate(GS_MAINMENU), reset(false), is_running(true), game_over(false), is_paused(false){}
+	GameMaster(): gstate(GS_MAINMENU), reset(false), is_running(true), game_over(false), 
+			is_paused(false), cd_started(false), cd_counter(0){}
 };
 
 extern std::shared_ptr<GameMaster> g_master; // Global game master

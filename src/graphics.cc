@@ -188,6 +188,8 @@ void Button::handleEvents(SDL_Event* e){
 				switch(pause_action){
 					case PA_RESUME:
 						g_master->is_paused = false;
+						g_master->cd_counter = CD_LENGTH;
+						g_master->cd_started = true;
 						break;
 					case PA_MAINMENU:
 						g_master->reset = true;
@@ -205,6 +207,8 @@ void Button::handleEvents(SDL_Event* e){
 			} else {
 				// Otherwise, set game level to button that was pressed and start the game
 				std::cout << "Started game on difficulty: " << getText() << "\n";
+				g_master->cd_started = true;
+				g_master->cd_counter = CD_LENGTH;
 				g_master->diff = getDiff();
 				g_master->gstate = GS_INGAME;
 			}

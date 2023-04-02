@@ -1,6 +1,7 @@
 #include "globals.h"
 #include "graphics.h"
 #include "snake.h"
+#include <thread>
 #include <time.h>
 
 void handleMenuQuit(GFX* gfx, SDL_Event event);
@@ -74,19 +75,27 @@ int main(int argc, char *argv[]){
 					((float)SCREEN_W/3) + ((float)GRID_CELL_SIZE*6.5f), (GRID_CELL_SIZE*8),
 					BLACK, F_SMALL
 				);
-				// Render quit button below menu
+				// Render quit button below main_menu
 				gfx->renderButton(quit_btn);
 
 				gfx->renderText("Made by: Hoswoo",
 					(GRID_CELL_SIZE), (SCREEN_H-(GRID_CELL_SIZE*2)),
 					WHITE, F_SMALL
 				);
+				// Display game version
+				gfx->renderText(GAME_VERSION,
+					(SCREEN_W - (GRID_CELL_SIZE*4)), (SCREEN_H-(GRID_CELL_SIZE*2)),
+					WHITE, F_SMALL
+				);
+
 				gfx->renderPresent();
 			}
 			break; // End GS_MAINMENU
 
 			case GS_INGAME:
 			{
+				gfx->renderClear();
+
 				// Free up main_menu memory if game is being played
 				if (main_menu){
 					delete main_menu;
@@ -94,7 +103,6 @@ int main(int argc, char *argv[]){
 					main_menu = nullptr;
 				}
 
-				gfx->renderClear();
 				SDL_Event event;
 				SDL_Rect* coll = nullptr;
 
@@ -109,12 +117,12 @@ int main(int argc, char *argv[]){
 						delete pause_menu;	
 						pause_menu = nullptr;
 					}
-
+					
 					while (SDL_PollEvent(&event))
 						handleIngameInputs(gfx, snake, event);
 
 					// All events in this if statement are considered the "game tick"
-					if (tick % g_master->diff == 0){
+					if (g_master->cd_counter < 0 && (tick % g_master->diff == 0)){
 						// If the snake ate the food
 						if (checkCollision(*snake->getHead(), food->getPos())){
 							snake->handleEatEvents(food);
@@ -126,7 +134,7 @@ int main(int argc, char *argv[]){
 						// If the snake collided with itself, then it's game over
 						if ((coll = snake->checkSnakeCollision())){
 							g_master->game_over = true;
-							std::cout << "Snake ate itself\n";
+							std::cout << "Snake commited sudoku\n";
 						}
 
 
@@ -157,7 +165,6 @@ int main(int argc, char *argv[]){
 					}
 
 					// gfx->renderGrid(); // Render grey gridlines (might remove from final build)
-					
 
 					prev = *snake->getHead();
 					tick++;
@@ -165,6 +172,25 @@ int main(int argc, char *argv[]){
 				  
 				gfx->renderFood(*food);
 				gfx->renderSnake(*snake);
+				
+				// These ifs are down here because we want them rendered on top of all the other game elements	
+				if (!g_master->cd_started && g_master->cd_counter > -1){
+					gfx->renderText(std::to_string(g_master->cd_counter).c_str(),
+						SCREEN_W/2, SCREEN_H/2,
+						WHITE, F_LARGE
+					);
+					std::this_thread::sleep_for(std::chrono::seconds(1));
+					g_master->cd_counter--;
+				}
+				
+				// This is for allowing the game to render the first frame before the cooldown starts
+				if (g_master->cd_started){
+					g_master->cd_started = false;
+					gfx->renderText("Get ready...",
+						(SCREEN_W/2)-(GRID_CELL_SIZE*6), ((SCREEN_H/2)-(GRID_CELL_SIZE*2)),
+						WHITE, F_LARGE
+					);
+				}
 
 				if (g_master->is_paused){
 					gfx->renderMenu(pause_menu);
@@ -188,6 +214,8 @@ int main(int argc, char *argv[]){
 }
 
 void handleIngameInputs(GFX* gfx, Snake* snake, SDL_Event event){
+	if (g_master->cd_counter > 0) // Don't handle any input events if the cooldown is still running
+		return;
 	// Open pause menu if player presses ESC or P, or tries to exit manually
 	if (event.type == SDL_QUIT || 
 			(event.type == SDL_KEYDOWN && (event.key.keysym.sym == SDLK_ESCAPE || event.key.keysym.sym == SDLK_p))){
