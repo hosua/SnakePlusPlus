@@ -12,7 +12,7 @@
 #include <iostream> // For printing
 
 #include <memory> // For smart pointers
-
+				  
 // Collections
 #include <utility> // For std::pair
 #include <array>
@@ -23,8 +23,9 @@
 #include <thread>
 
 #include "sounds.h"
+#include "save.h"
 
-#define GAME_VERSION "v0.0.3"
+#define GAME_VERSION "v0.0.4"
 
 // To ensure grid contains only full squares, GRID_CELL_SIZE must divide evenly into 
 // both SCREEN_W and SCREEN_H
@@ -85,6 +86,8 @@ typedef enum PauseAction {
 // Encapsulate important game data into GameMaster
 struct GameMaster {
 	GameState gstate;
+	std::string buff_str; // string buffer for displaying high score in main menu
+	int level;
 	int option; // Determines the length of each frame. Lower option value == higher difficulty,
 				// negative numbers are reserved for menu options.
 	bool reset; // If true, game should resett all objects (snake & food) and global variables
@@ -104,7 +107,7 @@ struct GameMaster {
 		cd_started = true;
 	}
 
-	GameMaster(): gstate(GS_MAINMENU), reset(false), is_running(true), game_over(false), 
+	GameMaster(): gstate(GS_MAINMENU), buff_str(""), level(0), reset(false), is_running(true), game_over(false), 
 	is_paused(false), cd_started(false), cd_counter(0){}
 };
 
@@ -119,5 +122,7 @@ bool initFonts();
 
 // Returns true if the two SDL_Rect objects overlap
 bool checkCollision(SDL_Rect a, SDL_Rect b); 
+
+bool stringIsInt(std::string s); 
 
 #endif // GLOBALS_H

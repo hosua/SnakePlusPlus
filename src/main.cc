@@ -29,11 +29,17 @@ int main(int argc, char *argv[]){
 	if (!initFonts())
 		exit(EXIT_FAILURE);
 	initSounds(); // If sounds fail to load, game should still be playable so no need to exit here.
-
+	
+	// Save data
+	if (!(g_savedata = saveLoad()))
+		saveInit();
+	// Sounds
 	g_soundmaster = std::unique_ptr<SoundMaster>(new SoundMaster());
-
+	
+	// Graphics
 	std::unique_ptr<GFX> gfx = std::unique_ptr<GFX>(new GFX());
-
+	
+	// Game elements
 	std::unique_ptr<Snake> snake = std::unique_ptr<Snake>(
 			new Snake(
 				SCREEN_W/2, SCREEN_H/2, 
@@ -112,6 +118,13 @@ int main(int argc, char *argv[]){
 						ICON_SIZE, ICON_SIZE
 					);
 
+				// Render high score
+				if (!g_gamemaster->buff_str.empty())
+					gfx->renderText(g_gamemaster->buff_str,
+						((float)SCREEN_W/3) + ((float)GRID_CELL_SIZE*4.8f), SCREEN_H/2,
+						WHITE, F_SMALL
+					);
+
 				gfx->renderPresent();
 			}
 			break; // End GS_MAINMENU
@@ -163,7 +176,7 @@ int main(int argc, char *argv[]){
 						// If the snake collided with itself, then it's game over
 						if ((coll = snake->checkSnakeCollision())){
 							g_gamemaster->game_over = true;
-							std::cout << "Snake commited sudoku\n";
+							std::cout << "Snake committed sudoku\n";
 						}
 
 
@@ -186,7 +199,16 @@ int main(int argc, char *argv[]){
 							gfx->renderFood(*food);
 							gfx->renderSnake(*snake);
 							gfx->renderGameover(prev);
+
+							// Render score
+							gfx->renderText(std::string("SCORE: " + std::to_string(snake->length()-1)),
+									(GRID_CELL_SIZE/2), (GRID_CELL_SIZE/2),
+									WHITE, F_SMALL
+							);
+
 							gfx->renderPresent();
+							// Update save file score
+							saveUpdate(g_gamemaster->level, snake->length()-1);
 							std::this_thread::sleep_for(std::chrono::seconds(2)); // Add some delay before game starts up again
 
 							snake->reset();
@@ -204,6 +226,12 @@ int main(int argc, char *argv[]){
 				  
 				gfx->renderFood(*food);
 				gfx->renderSnake(*snake);
+
+				// Render score
+				gfx->renderText(std::string("SCORE: " + std::to_string(snake->length()-1)),
+						(GRID_CELL_SIZE/2), (GRID_CELL_SIZE/2),
+						WHITE, F_SMALL
+				);
 				
 				// These ifs are down here because we want them rendered on top of all the other game elements	
 				if (!g_gamemaster->cd_started && g_gamemaster->cd_counter > -1){
@@ -289,10 +317,7 @@ void handleIngameInputs(GFX* gfx, Snake* snake, SDL_Event event){
 					break;
 				case SDLK_m: // Mute/unmute sound
 					g_soundmaster->toggleMuted();
-					if (g_soundmaster->isMuted())
-						std::cout << "Sound muted\n";
-					else
-						std::cout << "Sound unmuted\n";
+					(g_soundmaster->isMuted()) ? std::cout << "Sound muted\n" : std::cout << "Sound unmuted\n";
 					break;
 			}
 		break;
@@ -310,10 +335,7 @@ void handlePauseInputs(GFX* gfx, SDL_Event event){
 			switch(event.key.keysym.sym){
 				case SDLK_m: // Mute/unmute sound
 					g_soundmaster->toggleMuted();
-					if (g_soundmaster->isMuted())
-						std::cout << "Sound muted\n";
-					else
-						std::cout << "Sound unmuted\n";
+					(g_soundmaster->isMuted()) ? std::cout << "Sound muted\n" : std::cout << "Sound unmuted\n";
 					break;
 			}
 		break;
@@ -332,10 +354,7 @@ void handleMainMenuInputs(GFX* gfx, SDL_Event event){
 			switch(event.key.keysym.sym){
 				case SDLK_m: // Mute/unmute sound
 					g_soundmaster->toggleMuted();
-					if (g_soundmaster->isMuted())
-						std::cout << "Sound muted\n";
-					else
-						std::cout << "Sound unmuted\n";
+					(g_soundmaster->isMuted()) ? std::cout << "Sound muted\n" : std::cout << "Sound unmuted\n";
 					break;
 			}
 		break;

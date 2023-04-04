@@ -225,20 +225,34 @@ void Button::handleEvents(SDL_Event* e){
 	}
 
 	if (inside){
+		int level = 0;
+		std::string txt = getText();
+
 		if (_mouse_left_hitbox){ // Ensure sound only plays once until the mouse leaves the hitbox
 			_mouse_left_hitbox = false;
 			if (!g_soundmaster->isMuted() && g_soundmaster->getSound(S_MENUHOVER))
 				Mix_PlayChannel(-1, g_soundmaster->getSound(S_MENUHOVER), 0);
+			if (stringIsInt(txt)){
+				level = std::stoi(getText());
+				if (level > 0){
+					int high_score = getHighScore(level);
+					g_gamemaster->buff_str = "Level " + std::to_string(level) 
+						+ " high score: " + std::to_string(high_score);
+					std::cout << g_gamemaster->buff_str << "\n";
+				}
+			}
 		}
 		_hex_currcolor = GREEN;
+			
+		int opt = getOption();
+
 		if (e->type == SDL_MOUSEBUTTONDOWN){
 			if (!g_soundmaster->isMuted() && g_soundmaster->getSound(S_MENUSELECT))
 				Mix_PlayChannel(-1, g_soundmaster->getSound(S_MENUSELECT), 0);
-			int level = getOption();
 			// negative numbers are reserved for pause menu actions
-			if (level < 0){	
+			if (opt < 0){	
 				// Cast int to PauseAction enum to make compiler happy
-				PauseAction pause_action = (PauseAction) level;
+				PauseAction pause_action = (PauseAction) opt;
 				switch(pause_action){
 					case PA_RESUME:
 						g_gamemaster->startCD();
@@ -252,19 +266,21 @@ void Button::handleEvents(SDL_Event* e){
 						break;
 				}
 			// level 0 is reserved for quit event,
-			} else if (level == 0){
-				// If level is 0, then handle quit event
+			} else if (opt == 0){
+				// If opt is 0, then handle quit event
 				std::cout << "Pressed quit button\n";
 				g_gamemaster->is_running = false;
 			} else {
 				// Otherwise, set game level to button that was pressed and start the game
 				std::cout << "Started game on difficulty: " << getText() << "\n";
+				level = std::stoi(getText());
+				g_gamemaster->level = level;
 				g_gamemaster->startCD();
-				g_gamemaster->option = getOption();
+				g_gamemaster->option = opt;
 				g_gamemaster->gstate = GS_INGAME;
 			}
 		}
-	} else {
+	} else { // Not inside
 		_mouse_left_hitbox = true;
 		_hex_currcolor = _hex_bgcolor;
 	}
@@ -330,7 +346,7 @@ void Menu::setBackground(unsigned long hex_bgcolor, int border_sz){
 }
 
 /* Main Menu stuff */
-// Text displayed on main menu buttons
+// Text displayed on main menu buttons, idk why I made this shit so convoluted
 std::vector<std::string> btn_txt = { "1", "2", "3", "4", "5", "6", "7", "8", "9", "10" };
 // Lower level value indicates a harder difficulty
 std::vector<int> levels = { 10, 9, 8, 7, 6, 5, 4, 3, 2, 1 };

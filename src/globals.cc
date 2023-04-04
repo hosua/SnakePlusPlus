@@ -50,3 +50,5 @@ bool initFonts(){
 	}
 	return true;
 }
+// Return true if string is valid integer
+bool stringIsInt(std::string s){ return s.find_first_not_of("0123456789") == std::string::npos; }
