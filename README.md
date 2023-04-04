@@ -5,6 +5,7 @@ Controls:
 ```
 WASD/Arrow Keys to change directions.
 ESC/P to pause the game.
+M to mute/unmute sounds
 ```
 
 ![snake](img/snake-01.gif)
