@@ -1,5 +1,43 @@
 #include "graphics.h"
 
+bool initIMG(){
+	if (IMG_Init(IMG_INIT_PNG) == 0){
+		std::cerr << "Error: SDL2_image failed to initialize!\n";
+		return false;
+	}
+	return true;
+}
+
+bool GFX::loadImages(){
+	SDL_Surface* surface = nullptr;
+
+	surface = IMG_Load(IMG_PATH_AUDIO_ON);
+	_img_bank[IMG_AUDIO_ON] = SDL_CreateTextureFromSurface(_renderer, surface);
+	if (!_img_bank[IMG_AUDIO_ON]){
+		std::cerr << "Error: Texture for AUDIO_ON failed to load.\n";
+		return false;
+	}
+	SDL_FreeSurface(surface);
+	surface = nullptr;
+	
+	surface = IMG_Load(IMG_PATH_AUDIO_OFF);
+	_img_bank[IMG_AUDIO_OFF] = SDL_CreateTextureFromSurface(_renderer, surface);
+	if (!_img_bank[IMG_AUDIO_OFF]){
+		std::cerr << "Error: Texture for AUDIO_OFF failed to load.\n";
+		return false;
+	}
+	SDL_FreeSurface(surface);
+	surface = nullptr;
+
+	return true;
+}
+
+void GFX::blitImage(ImageType image_type, int x, int y, int w, int h) const {
+	SDL_Rect dest = {.x=x,.y=y,.w=w,.h=h};
+	SDL_Texture* texture = _img_bank[image_type];
+	SDL_RenderCopy(_renderer, texture, NULL, &dest);
+}
+
 void GFX::init(){
 
 	_window = SDL_CreateWindow("Snake++", 
@@ -22,6 +60,12 @@ void GFX::init(){
 		cleanQuit(false);
 	}
 
+	if (!initIMG())
+		cleanQuit(false);
+
+	if (!loadImages())
+		cleanQuit(false);
+
 	// Allow window to be resizable
 	SDL_SetWindowResizable(_window, SDL_TRUE);
 	// Allow resolution independence (Disabled because buttons don't work properly when resolution is scaled)
@@ -35,10 +79,13 @@ void GFX::cleanQuit(bool success) const {
 	printf("Quitting, goodbye!\n");
 	
 	// Clean up fonts
-	for (TTF_Font* font : g_master->fonts)
+	for (TTF_Font* font : g_gamemaster->fonts)
 		TTF_CloseFont(font);
 	TTF_Quit();
 	
+	// Clean up IMG
+	IMG_Quit();
+
 	// Clean up SDL
 	SDL_DestroyRenderer(_renderer);
 	SDL_DestroyWindow(_window);
@@ -112,7 +159,7 @@ void GFX::renderText(std::string text, int x, int y,
 
 	SDL_Color color = hexToColor(hex_font_color);
 	SDL_SetRenderDrawColor(_renderer, color.r, color.g, color.b, 255);
-	SDL_Surface* surface = TTF_RenderText_Solid(g_master->fonts[font_type], text.c_str(), color);
+	SDL_Surface* surface = TTF_RenderText_Solid(g_gamemaster->fonts[font_type], text.c_str(), color);
 	SDL_Texture* texture = SDL_CreateTextureFromSurface(_renderer, surface);
 
 	SDL_Rect rect = {.x=x, .y=y, .w=surface->w, .h=surface->h};
@@ -178,42 +225,47 @@ void Button::handleEvents(SDL_Event* e){
 	}
 
 	if (inside){
+		if (_mouse_left_hitbox){ // Ensure sound only plays once until the mouse leaves the hitbox
+			_mouse_left_hitbox = false;
+			if (!g_soundmaster->isMuted() && g_soundmaster->getSound(S_MENUHOVER))
+				Mix_PlayChannel(-1, g_soundmaster->getSound(S_MENUHOVER), 0);
+		}
 		_hex_currcolor = GREEN;
 		if (e->type == SDL_MOUSEBUTTONDOWN){
-			int level = getDiff();
+			if (!g_soundmaster->isMuted() && g_soundmaster->getSound(S_MENUSELECT))
+				Mix_PlayChannel(-1, g_soundmaster->getSound(S_MENUSELECT), 0);
+			int level = getOption();
 			// negative numbers are reserved for pause menu actions
 			if (level < 0){	
 				// Cast int to PauseAction enum to make compiler happy
 				PauseAction pause_action = (PauseAction) level;
 				switch(pause_action){
 					case PA_RESUME:
-						g_master->is_paused = false;
-						g_master->cd_counter = CD_LENGTH;
-						g_master->cd_started = true;
+						g_gamemaster->startCD();
 						break;
 					case PA_MAINMENU:
-						g_master->reset = true;
-						g_master->gstate = GS_MAINMENU;
+						g_gamemaster->reset = true;
+						g_gamemaster->gstate = GS_MAINMENU;
 						break;
 					case PA_QUIT:
-						g_master->is_running = false;
+						g_gamemaster->is_running = false;
 						break;
 				}
 			// level 0 is reserved for quit event,
 			} else if (level == 0){
 				// If level is 0, then handle quit event
 				std::cout << "Pressed quit button\n";
-				g_master->is_running = false;
+				g_gamemaster->is_running = false;
 			} else {
 				// Otherwise, set game level to button that was pressed and start the game
 				std::cout << "Started game on difficulty: " << getText() << "\n";
-				g_master->cd_started = true;
-				g_master->cd_counter = CD_LENGTH;
-				g_master->diff = getDiff();
-				g_master->gstate = GS_INGAME;
+				g_gamemaster->startCD();
+				g_gamemaster->option = getOption();
+				g_gamemaster->gstate = GS_INGAME;
 			}
 		}
 	} else {
+		_mouse_left_hitbox = true;
 		_hex_currcolor = _hex_bgcolor;
 	}
 }

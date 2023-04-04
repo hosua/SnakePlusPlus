@@ -1,6 +1,7 @@
 #include "globals.h"
 
-std::shared_ptr<GameMaster> g_master = nullptr; // Global game master
+std::unique_ptr<GameMaster> g_gamemaster = nullptr; // Global game master
+std::unique_ptr<SoundMaster> g_soundmaster = nullptr; // Global sound master
 
 // Convert hexademical # to SDL_Color struct 
 SDL_Color hexToColor(unsigned long hex_color){
@@ -34,17 +35,18 @@ bool checkCollision(SDL_Rect a, SDL_Rect b){
 
 }
 
-void initFonts(){
+bool initFonts(){
 	TTF_Init(); // Must always be called before using SDL_ttf API
 	
-	g_master->fonts = std::vector<TTF_Font*>(NUM_FONTS, nullptr);
+	g_gamemaster->fonts = std::vector<TTF_Font*>(NUM_FONTS, nullptr);
 
-	g_master->fonts[0] = TTF_OpenFont(FONT_PATH, FONT_SIZE_SMALL);
-	g_master->fonts[1] = TTF_OpenFont(FONT_PATH, FONT_SIZE_MED);
-	g_master->fonts[2] = TTF_OpenFont(FONT_PATH, FONT_SIZE_LARGE);
+	g_gamemaster->fonts[0] = TTF_OpenFont(FONT_PATH, FONT_SIZE_SMALL);
+	g_gamemaster->fonts[1] = TTF_OpenFont(FONT_PATH, FONT_SIZE_MED);
+	g_gamemaster->fonts[2] = TTF_OpenFont(FONT_PATH, FONT_SIZE_LARGE);
 
-	if (!g_master->fonts[0] || !g_master->fonts[1] || !g_master->fonts[2]){
+	if (!g_gamemaster->fonts[0] || !g_gamemaster->fonts[1] || !g_gamemaster->fonts[2]){
 		std::cerr << "Fatal Error: Font file \"" << FONT_PATH << "\" could not be found.\n";
-		g_master->is_running = false;
+		return false;
 	}
+	return true;
 }

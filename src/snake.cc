@@ -12,6 +12,7 @@ void Food::setRandPos(){
 void Snake::reset(){
 	_head.x = SCREEN_W/2; _head.y = SCREEN_H/2;
 	_body.clear();
+	_dir = _buff_dir = M_RIGHT;
 	_length = 1;
 }
 
@@ -22,28 +23,28 @@ void Snake::handleMovement(){
 		case M_LEFT:
 			_head.x -= _dim;
 			if (_head.x < 0){ 
-				g_master->game_over = true;		
+				g_gamemaster->game_over = true;		
 				setBuffDir(M_RIGHT);
 			}
 			break;
 		case M_DOWN:
 			_head.y += _dim;
 			if (_head.y >= SCREEN_H){ 
-				g_master->game_over = true;		
+				g_gamemaster->game_over = true;		
 				setBuffDir(M_UP);
 			}
 			break;
 		case M_RIGHT:
 			_head.x += _dim;
 			if (_head.x >= SCREEN_W){ 
-				g_master->game_over = true;		
+				g_gamemaster->game_over = true;		
 				setBuffDir(M_LEFT);
 			}
 			break;
 		case M_UP:
 			_head.y -= _dim;
 			if (_head.y < 0){ 
-				g_master->game_over = true;		
+				g_gamemaster->game_over = true;		
 				setBuffDir(M_DOWN);
 			}
 			break;
@@ -109,7 +110,7 @@ SDL_Rect* Snake::checkSnakeCollision(){ // Returns NULL if no collision, check's
 	return nullptr;
 }
 
-bool Snake::collidesWithFood(Food food){
+bool Snake::collidesWithFood(Food food) const {
 	// Return true if food collides with snake's head
 	if (checkCollision(_head, food.getPos()))
 		return true;

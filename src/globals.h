@@ -6,9 +6,11 @@
 #include <SDL2/SDL.h> // SDL2 library
 #include <SDL2/SDL_scancode.h> // For reading I/O device input
 #include <SDL2/SDL_ttf.h> // For using fonts in SDL
+#include <SDL2/SDL_mixer.h> // For sounds
+#include <SDL2/SDL_image.h> // For blitting images
 
 #include <iostream> // For printing
- 
+
 #include <memory> // For smart pointers
 
 // Collections
@@ -20,13 +22,15 @@
 #include <chrono> // timing
 #include <thread>
 
-#define GAME_VERSION "v0.0.2"
+#include "sounds.h"
 
-// For grid to align, GRID_CELL_SIZE must divide evenly into both SCREEN_W and SCREEN_H
+#define GAME_VERSION "v0.0.3"
+
+// To ensure grid contains only full squares, GRID_CELL_SIZE must divide evenly into 
+// both SCREEN_W and SCREEN_H
 #define SCREEN_W 1280
 #define SCREEN_H 720
 #define GRID_CELL_SIZE 20
-// #define GRID_CELL_SIZE 40
 
 #define FPS 60
 
@@ -81,27 +85,37 @@ typedef enum PauseAction {
 // Encapsulate important game data into GameMaster
 struct GameMaster {
 	GameState gstate;
-	int diff; // Determines the length of each frame. Lower difficulty value == harder
+	int option; // Determines the length of each frame. Lower option value == higher difficulty,
+				// negative numbers are reserved for menu options.
 	bool reset; // If true, game should resett all objects (snake & food) and global variables
 	bool is_running; // Program should immediately exit if this variable is false
 	bool game_over; // Player lost, game should return to main menu
 	bool is_paused; // Game is currently running, but paused
+
 	bool cd_started; // Indicate the cooldown is starting
 	int cd_counter; // Keeps track of how many seconds remain before gameplay resumes/starts
 	std::vector<TTF_Font*> fonts;
 
 	void resetGame(){ gstate = GS_MAINMENU; reset = game_over, is_paused = false; }
 
+	void startCD(){ // Should call this function when game starts or resumes from pause
+		is_paused = false;
+		cd_counter = CD_LENGTH;
+		cd_started = true;
+	}
+
 	GameMaster(): gstate(GS_MAINMENU), reset(false), is_running(true), game_over(false), 
-			is_paused(false), cd_started(false), cd_counter(0){}
+	is_paused(false), cd_started(false), cd_counter(0){}
 };
 
-extern std::shared_ptr<GameMaster> g_master; // Global game master
-						 
+extern std::unique_ptr<GameMaster> g_gamemaster; // Global game master
+extern std::unique_ptr<SoundMaster> g_soundmaster; // Global sound master
+
 void resetGame(GameMaster* gm); // Reset game master variables for new game
 
 // Call this before doing anything with fonts or else
-void initFonts();
+// Returns false if anything fails during initialization
+bool initFonts();
 
 // Returns true if the two SDL_Rect objects overlap
 bool checkCollision(SDL_Rect a, SDL_Rect b); 

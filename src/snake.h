@@ -28,13 +28,13 @@ public:
 
 	// Returns true if any part of the snake's head/body collides with food.
 	// Used to respawn food again if the food happens to spawn on top of the snake
-	bool collidesWithFood(Food food); 
+	bool collidesWithFood(Food food) const; 
 
-	std::deque<SDL_Rect> getBody(){ return _body; }
-	size_t length(){ return _length; } // Get length of snake
-	size_t size(){ return _length; } // Same as length()
+	std::deque<SDL_Rect> getBody() const { return _body; }
+	size_t length() const { return _length; } // Get length of snake
+	size_t size() const { return _length; } // Same as length()
 	SDL_Rect* getHead(){ return &_head; } // Get snake's head rect
-	SDL_Color getColor(){ return _color; } // Get color of snake
+	SDL_Color getColor() const { return _color; } // Get color of snake
 	
 private:
 

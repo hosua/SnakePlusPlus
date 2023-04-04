@@ -4,7 +4,7 @@
 #include <thread>
 #include <time.h>
 
-void handleMenuQuit(GFX* gfx, SDL_Event event);
+void handleMainMenuInputs(GFX* gfx, SDL_Event event);
 void handleIngameInputs(GFX* gfx, Snake* snake, SDL_Event event);
 void handlePauseInputs(GFX* gfx, SDL_Event event);
 	
@@ -23,30 +23,41 @@ int main(int argc, char *argv[]){
 		exit(EXIT_FAILURE);
 	}
 
-	g_master = std::shared_ptr<GameMaster>(new GameMaster());
+	g_gamemaster = std::unique_ptr<GameMaster>(new GameMaster());
+	if (!initIMG())
+		exit(EXIT_FAILURE);
+	if (!initFonts())
+		exit(EXIT_FAILURE);
+	initSounds(); // If sounds fail to load, game should still be playable so no need to exit here.
 
-	initFonts();
+	g_soundmaster = std::unique_ptr<SoundMaster>(new SoundMaster());
 
-	GFX* gfx = new GFX();
+	std::unique_ptr<GFX> gfx = std::unique_ptr<GFX>(new GFX());
 
-	Snake* snake = new Snake(SCREEN_W/2, SCREEN_H/2, 
-		GRID_CELL_SIZE, LIGHT_BLUE
+	std::unique_ptr<Snake> snake = std::unique_ptr<Snake>(
+			new Snake(
+				SCREEN_W/2, SCREEN_H/2, 
+				GRID_CELL_SIZE, LIGHT_BLUE
+			)
 	);
-	Food* food = new Food(SCREEN_W/2+GRID_CELL_SIZE, SCREEN_H/2+GRID_CELL_SIZE, 
-		GRID_CELL_SIZE, GREEN
+	std::unique_ptr<Food> food = std::unique_ptr<Food>(
+			new Food(
+				SCREEN_W/2+GRID_CELL_SIZE, SCREEN_H/2+GRID_CELL_SIZE, 
+				GRID_CELL_SIZE, GREEN
+			)
 	);
 
 	SDL_Rect prev; // Store position of head in the previous iteration
 	
-	while (g_master->is_running){
-		if (g_master->reset){
+	while (g_gamemaster->is_running){
+		if (g_gamemaster->reset){
 			snake->reset();
 			food->setRandPos();
-			g_master->resetGame();
-			g_master->reset = false;
+			g_gamemaster->resetGame();
+			g_gamemaster->reset = false;
 		}
 
-		switch(g_master->gstate){
+		switch(g_gamemaster->gstate){
 			case GS_MAINMENU:
 			{
 				// Initialize the main_menu if it is NULL
@@ -60,7 +71,7 @@ int main(int argc, char *argv[]){
 
 				// Handle menu input
 				while (SDL_PollEvent(&event)){
-					handleMenuQuit(gfx, event);
+					handleMainMenuInputs(gfx.get(), event);
 					main_menu->handleEvents(&event);
 					quit_btn->handleEvents(&event);
 				}
@@ -69,6 +80,7 @@ int main(int argc, char *argv[]){
 					((float)SCREEN_W/3) + ((float)GRID_CELL_SIZE*4.5f), GRID_CELL_SIZE, 
 					WHITE, F_LARGE
 				);
+
 				gfx->renderMenu(main_menu);
 				// Render text above menu frame
 				gfx->renderText("Select Difficulty", 
@@ -87,6 +99,18 @@ int main(int argc, char *argv[]){
 					(SCREEN_W - (GRID_CELL_SIZE*4)), (SCREEN_H-(GRID_CELL_SIZE*2)),
 					WHITE, F_SMALL
 				);
+				
+				// Render icon based on if sound is muted or unmuted
+				if (g_soundmaster->isMuted())
+					gfx->blitImage(IMG_AUDIO_OFF, 
+						SCREEN_W - (GRID_CELL_SIZE*2.5f), (GRID_CELL_SIZE/2),
+						ICON_SIZE, ICON_SIZE
+					);
+				else
+					gfx->blitImage(IMG_AUDIO_ON, 
+						SCREEN_W - (GRID_CELL_SIZE*2.5f), (GRID_CELL_SIZE/2),
+						ICON_SIZE, ICON_SIZE
+					);
 
 				gfx->renderPresent();
 			}
@@ -106,10 +130,10 @@ int main(int argc, char *argv[]){
 				SDL_Event event;
 				SDL_Rect* coll = nullptr;
 
-				if (g_master->is_paused){ // Game is paused, handle the pause menu
+				if (g_gamemaster->is_paused){ // Game is paused, handle the pause menu
 					while (SDL_PollEvent(&event)){
 						pause_menu->handleEvents(&event);
-						handlePauseInputs(gfx, event);
+						handlePauseInputs(gfx.get(), event);
 					}
 
 				} else { // Game is unpaused, handle gameplay
@@ -119,27 +143,35 @@ int main(int argc, char *argv[]){
 					}
 					
 					while (SDL_PollEvent(&event))
-						handleIngameInputs(gfx, snake, event);
+						handleIngameInputs(gfx.get(), snake.get(), event);
 
 					// All events in this if statement are considered the "game tick"
-					if (g_master->cd_counter < 0 && (tick % g_master->diff == 0)){
+					if (g_gamemaster->cd_counter < 0 && (tick % g_gamemaster->option == 0)){
 						// If the snake ate the food
 						if (checkCollision(*snake->getHead(), food->getPos())){
-							snake->handleEatEvents(food);
-							std::cout << "Snake has eaten " << snake->length()-1 << " apples!\n";
+							snake->handleEatEvents(food.get());
+							if (snake->length()-1 == 1) // English majors be like
+								std::cout << "Snake has eaten 1 apple!\n";
+							else
+								std::cout << "Snake has eaten " << snake->length()-1 << " apples!\n";
+							if (!g_soundmaster->isMuted() && g_soundmaster->getSound(S_EAT))
+								Mix_PlayChannel(-1, g_soundmaster->getSound(S_EAT), 0);
 						}
 
 						snake->handleMovement();
 
 						// If the snake collided with itself, then it's game over
 						if ((coll = snake->checkSnakeCollision())){
-							g_master->game_over = true;
+							g_gamemaster->game_over = true;
 							std::cout << "Snake commited sudoku\n";
 						}
 
 
-						if (g_master->game_over){
-							if (snake->length() == 2)
+						if (g_gamemaster->game_over){
+							// Play death sound
+							if (!g_soundmaster->isMuted() && g_soundmaster->getSound(S_EXPLOSION))
+								Mix_PlayChannel(-1, g_soundmaster->getSound(S_EXPLOSION), 0); 
+							if (snake->length() == 2) // English majors be like
 								std::cout << "Game over! Your snake died after eating 1 apple.\n";
 							else
 								std::cout << "Game over! Your snake died after eating " << snake->length()-1 << " apples.\n";
@@ -148,8 +180,8 @@ int main(int argc, char *argv[]){
 							if (!coll)
 								coll = &prev;
 
-							g_master->gstate = GS_MAINMENU;
-							g_master->game_over = g_master->is_paused = false;
+							g_gamemaster->gstate = GS_MAINMENU;
+							g_gamemaster->game_over = g_gamemaster->is_paused = false;
 
 							gfx->renderFood(*food);
 							gfx->renderSnake(*snake);
@@ -174,25 +206,25 @@ int main(int argc, char *argv[]){
 				gfx->renderSnake(*snake);
 				
 				// These ifs are down here because we want them rendered on top of all the other game elements	
-				if (!g_master->cd_started && g_master->cd_counter > -1){
-					gfx->renderText(std::to_string(g_master->cd_counter).c_str(),
+				if (!g_gamemaster->cd_started && g_gamemaster->cd_counter > -1){
+					gfx->renderText(std::to_string(g_gamemaster->cd_counter).c_str(),
 						SCREEN_W/2, SCREEN_H/2,
 						WHITE, F_LARGE
 					);
 					std::this_thread::sleep_for(std::chrono::seconds(1));
-					g_master->cd_counter--;
+					g_gamemaster->cd_counter--;
 				}
 				
 				// This is for allowing the game to render the first frame before the cooldown starts
-				if (g_master->cd_started){
-					g_master->cd_started = false;
+				if (g_gamemaster->cd_started){
+					g_gamemaster->cd_started = false;
 					gfx->renderText("Get ready...",
 						(SCREEN_W/2)-(GRID_CELL_SIZE*6), ((SCREEN_H/2)-(GRID_CELL_SIZE*2)),
 						WHITE, F_LARGE
 					);
 				}
 
-				if (g_master->is_paused){
+				if (g_gamemaster->is_paused){
 					gfx->renderMenu(pause_menu);
 					gfx->renderText("Made by: Hoswoo",
 						(GRID_CELL_SIZE), (SCREEN_H-(GRID_CELL_SIZE*2)),
@@ -202,25 +234,42 @@ int main(int argc, char *argv[]){
 						(SCREEN_W/2), (GRID_CELL_SIZE*10),
 						WHITE, F_SMALL
 					);
-				}
+					// Display game version
+					gfx->renderText(GAME_VERSION,
+						(SCREEN_W - (GRID_CELL_SIZE*4)), (SCREEN_H-(GRID_CELL_SIZE*2)),
+						WHITE, F_SMALL
+					);
+
+					// Render icon based on if sound is muted or unmuted
+					if (g_soundmaster->isMuted())
+						gfx->blitImage(IMG_AUDIO_OFF, 
+							SCREEN_W - (GRID_CELL_SIZE*2.5f), (GRID_CELL_SIZE/2),
+							ICON_SIZE, ICON_SIZE
+						);
+					else
+						gfx->blitImage(IMG_AUDIO_ON, 
+							SCREEN_W - (GRID_CELL_SIZE*2.5f), (GRID_CELL_SIZE/2),
+							ICON_SIZE, ICON_SIZE
+						);
+				} // End if(g_gamemaster->is_paused())
 
 				gfx->renderPresent();
 				break; 
 			} // End GS_INGAME
 		} // End switch(g_game_state)
 	} // End while(g_is_running)
-	  
+	
 	gfx->cleanQuit();
 }
 
 void handleIngameInputs(GFX* gfx, Snake* snake, SDL_Event event){
-	if (g_master->cd_counter > 0) // Don't handle any input events if the cooldown is still running
+	if (g_gamemaster->cd_counter > 0) // Don't handle any input events if the cooldown is still running
 		return;
 	// Open pause menu if player presses ESC or P, or tries to exit manually
 	if (event.type == SDL_QUIT || 
 			(event.type == SDL_KEYDOWN && (event.key.keysym.sym == SDLK_ESCAPE || event.key.keysym.sym == SDLK_p))){
 		pause_menu = initPauseMenu();
-		g_master->is_paused = true;
+		g_gamemaster->is_paused = true;
 	}
 
 	switch(event.type){
@@ -238,6 +287,13 @@ void handleIngameInputs(GFX* gfx, Snake* snake, SDL_Event event){
 				case SDLK_d: case SDLK_RIGHT:
 					snake->setBuffDir(M_RIGHT);
 					break;
+				case SDLK_m: // Mute/unmute sound
+					g_soundmaster->toggleMuted();
+					if (g_soundmaster->isMuted())
+						std::cout << "Sound muted\n";
+					else
+						std::cout << "Sound unmuted\n";
+					break;
 			}
 		break;
 	}
@@ -246,14 +302,42 @@ void handleIngameInputs(GFX* gfx, Snake* snake, SDL_Event event){
 void handlePauseInputs(GFX* gfx, SDL_Event event){
 	// If user presses ESC or P while paused, resume the game
 	if ((event.type == SDL_KEYDOWN && 
-			(event.key.keysym.sym == SDLK_ESCAPE || event.key.keysym.sym == SDLK_p)))
-		g_master->is_paused = false;
+			(event.key.keysym.sym == SDLK_ESCAPE || event.key.keysym.sym == SDLK_p))){
+		g_gamemaster->startCD();
+	}
+	switch(event.type){
+		case SDL_KEYDOWN:
+			switch(event.key.keysym.sym){
+				case SDLK_m: // Mute/unmute sound
+					g_soundmaster->toggleMuted();
+					if (g_soundmaster->isMuted())
+						std::cout << "Sound muted\n";
+					else
+						std::cout << "Sound unmuted\n";
+					break;
+			}
+		break;
+	}
 }
 
-// Checks if game should quit in the menu
-void handleMenuQuit(GFX* gfx, SDL_Event event){
+// Handles main menu keyboard input
+void handleMainMenuInputs(GFX* gfx, SDL_Event event){
 	// If user presses ESC while in the menu, quit the game
 	if (event.type == SDL_QUIT ||
 			(event.type == SDL_KEYDOWN && event.key.keysym.sym == SDLK_ESCAPE))
 		gfx->cleanQuit();
+
+	switch(event.type){ // Allow player to mute/unmute in main menu
+		case SDL_KEYDOWN:
+			switch(event.key.keysym.sym){
+				case SDLK_m: // Mute/unmute sound
+					g_soundmaster->toggleMuted();
+					if (g_soundmaster->isMuted())
+						std::cout << "Sound muted\n";
+					else
+						std::cout << "Sound unmuted\n";
+					break;
+			}
+		break;
+	}
 }

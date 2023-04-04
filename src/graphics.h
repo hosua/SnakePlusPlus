@@ -3,12 +3,27 @@
 #include "snake.h"
 #include "globals.h"
 
+#define ICON_SIZE 35
+
+#define IMG_PATH_AUDIO_ON "assets/icons/audio_on.png"
+#define IMG_PATH_AUDIO_OFF "assets/icons/audio_off.png"
+
 class GFX;
 class Button;
 class Menu;
 
+#define NUM_IMG 2
+
+bool initIMG();
+
+typedef enum {
+	IMG_AUDIO_ON,
+	IMG_AUDIO_OFF,
+} ImageType;
+
 class GFX {
 public:
+
 	GFX(): _window(nullptr), _surface(nullptr), _renderer(nullptr)
 	{ init(); }
 
@@ -26,7 +41,11 @@ public:
 	
 	void renderMenu(Menu* menu) const; // Render menu consisting of multiple buttons
 	void renderButton(Button* button) const; // Render a single button
+	
+	bool loadImages();
+	void blitImage(ImageType image_type, int x, int y, int w, int h) const;
 private:
+	std::array<SDL_Texture*, NUM_IMG> _img_bank;
 	mutable SDL_Window* _window;
 	mutable SDL_Surface* _surface;
 	mutable SDL_Renderer* _renderer;
@@ -45,7 +64,7 @@ public:
 			  _font_type(font), 
 			  _hex_bgcolor(hex_bgcolor), _hex_fontcolor(hex_fontcolor), _hex_currcolor(hex_bgcolor), 
 			  _x_offset(x_offset), _y_offset(y_offset),
-			  _level(level){}
+			  _option(level), _mouse_left_hitbox(true){}
 	
 	~Button();
 
@@ -56,7 +75,7 @@ public:
 	unsigned long getBgColor(){ return _hex_bgcolor; }
 	unsigned long getFontColor(){ return _hex_fontcolor; }
 	unsigned long getCurrColor(){ return _hex_currcolor; }
-	int getDiff(){ return _level; }
+	int getOption(){ return _option; }
 
 	std::pair<float, float> getOffset(){ return std::make_pair(_x_offset, _y_offset); }
 	FontType getFontType(){ return _font_type; }
@@ -68,13 +87,15 @@ private:
 	FontType _font_type;
 	unsigned long _hex_bgcolor, _hex_fontcolor, _hex_currcolor;
 	float _x_offset, _y_offset;
-	int _level;
+	int _option;
+	bool _mouse_left_hitbox; // Prevent mouse sounds from playing multiple times when hovering over button
 };
 
 class Menu {
 public:
 	Menu(std::vector<std::string> text, std::vector<int> levels,
-	 	 int x, int y, int w, int h,
+	 	 int x, int y, 
+		 int w, int h,
 		 int ncols,
 		 int rgap=10, int cgap=10,
 		 float x_offset=0.1f, float y_offset=0.1f,
