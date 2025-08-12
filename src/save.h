@@ -5,6 +5,7 @@
 #include <memory>
 #include <iostream>
 #include <fstream>
+#include <cstdint>
 
 #define SAVE_PATH "save.bin"
 #define NUM_DIFFS 10 // Number of difficulties

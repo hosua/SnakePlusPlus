@@ -1,4 +1,5 @@
 snake++
 objs/
 save.bin
-Windows/save.bin
+windows/save.bin
+build/
