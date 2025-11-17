@@ -220,25 +220,32 @@ void Button::handleEvents(SDL_Event* e){
 	};
 
 	SDL_bool inside = SDL_FALSE;
-	int mx, my;
-	SDL_GetMouseState(&mx, &my);
+	if (e->type == SDL_MOUSEMOTION || e->type == SDL_MOUSEBUTTONDOWN || e->type == SDL_MOUSEBUTTONUP){
+		int mx, my;
+		SDL_GetMouseState(&mx, &my);
 
-	if (mx >= rect.x && mx <= rect.x + rect.w && my >= rect.y && my <= rect.y + rect.h)
-		inside = SDL_TRUE;
+		if (mx < rect.x) // mouse left of button
+			inside = SDL_FALSE;
+		else if (mx > rect.x + rect.w) // mouse right of button
+			inside = SDL_FALSE;
+		else if (my < rect.y) // mouse above button
+			inside = SDL_FALSE;
+		else if (my > rect.y + rect.h) // mouse below button
+			inside = SDL_FALSE;
+		else 
+			inside = SDL_TRUE;
+	}
 
 	if (inside){
 		int level = 0;
 		std::string txt = getText();
 
-		// Check if mouse just entered the hitbox (either from motion event or first time check)
-		if (_mouse_left_hitbox || e->type == SDL_MOUSEMOTION || e->type == 0){
-			if (_mouse_left_hitbox){
-				_mouse_left_hitbox = false;
-				#ifndef EMSCRIPTEN
-				if (g_soundmaster && !g_soundmaster->isMuted() && g_soundmaster->getSound(S_MENUHOVER))
-					Mix_PlayChannel(-1, g_soundmaster->getSound(S_MENUHOVER), 0);
-				#endif
-			}
+		if (_mouse_left_hitbox){ // Ensure sound only plays once until the mouse leaves the hitbox
+			_mouse_left_hitbox = false;
+			#ifndef EMSCRIPTEN
+			if (g_soundmaster && !g_soundmaster->isMuted() && g_soundmaster->getSound(S_MENUHOVER))
+				Mix_PlayChannel(-1, g_soundmaster->getSound(S_MENUHOVER), 0);
+			#endif
 			if (stringIsInt(txt)){
 				level = std::stoi(getText());
 				if (level > 0){
@@ -253,47 +260,41 @@ void Button::handleEvents(SDL_Event* e){
 			
 		int opt = getOption();
 
-		if (e->type == SDL_MOUSEBUTTONDOWN && e->button.button == SDL_BUTTON_LEFT){
-			if (!_button_click_processed){
-				_button_click_processed = true;
-				#ifndef EMSCRIPTEN
-				if (g_soundmaster && !g_soundmaster->isMuted() && g_soundmaster->getSound(S_MENUSELECT))
-					Mix_PlayChannel(-1, g_soundmaster->getSound(S_MENUSELECT), 0);
-				#endif
-				// negative numbers are reserved for pause menu actions
-				if (opt < 0){	
-					// Cast int to PauseAction enum to make compiler happy
-					PauseAction pause_action = (PauseAction) opt;
-					switch(pause_action){
-						case PA_RESUME:
-							g_gamemaster->startCD();
-							break;
-						case PA_MAINMENU:
-							g_gamemaster->reset = true;
-							g_gamemaster->gstate = GS_MAINMENU;
-							break;
-						case PA_QUIT:
-							g_gamemaster->is_running = false;
-							break;
-					}
-				// level 0 is reserved for quit event,
-				} else if (opt == 0){
-					// If opt is 0, then handle quit event
-					std::cout << "Pressed quit button\n";
-					g_gamemaster->is_running = false;
-				} else {
-					// Otherwise, set game level to button that was pressed and start the game
-					std::cout << "Started game on difficulty: " << getText() << "\n";
-					level = std::stoi(getText());
-					g_gamemaster->level = level;
-					g_gamemaster->startCD();
-					g_gamemaster->option = opt;
-					g_gamemaster->gstate = GS_INGAME;
+		if (e->type == SDL_MOUSEBUTTONDOWN){
+			#ifndef EMSCRIPTEN
+			if (g_soundmaster && !g_soundmaster->isMuted() && g_soundmaster->getSound(S_MENUSELECT))
+				Mix_PlayChannel(-1, g_soundmaster->getSound(S_MENUSELECT), 0);
+			#endif
+			// negative numbers are reserved for pause menu actions
+			if (opt < 0){	
+				// Cast int to PauseAction enum to make compiler happy
+				PauseAction pause_action = (PauseAction) opt;
+				switch(pause_action){
+					case PA_RESUME:
+						g_gamemaster->startCD();
+						break;
+					case PA_MAINMENU:
+						g_gamemaster->reset = true;
+						g_gamemaster->gstate = GS_MAINMENU;
+						break;
+					case PA_QUIT:
+						g_gamemaster->is_running = false;
+						break;
 				}
-				return;
+			// level 0 is reserved for quit event,
+			} else if (opt == 0){
+				// If opt is 0, then handle quit event
+				std::cout << "Pressed quit button\n";
+				g_gamemaster->is_running = false;
+			} else {
+				// Otherwise, set game level to button that was pressed and start the game
+				std::cout << "Started game on difficulty: " << getText() << "\n";
+				level = std::stoi(getText());
+				g_gamemaster->level = level;
+				g_gamemaster->startCD();
+				g_gamemaster->option = opt;
+				g_gamemaster->gstate = GS_INGAME;
 			}
-		} else if (e->type == SDL_MOUSEBUTTONUP && e->button.button == SDL_BUTTON_LEFT){
-			_button_click_processed = false;
 		}
 	} else { // Not inside
 		_mouse_left_hitbox = true;

@@ -39,6 +39,7 @@ emcc \
     -s EXPORTED_FUNCTIONS='["_main","_malloc","_free"]' \
     -s ASYNCIFY \
     -s ASSERTIONS=1 \
+    -lidbfs.js \
     --shell-file "${SCRIPT_DIR}/shell.html" \
     -o "${BUILD_DIR}/snake++.html" \
     -Wall

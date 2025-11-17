@@ -73,33 +73,19 @@ int main(int argc, char *argv[]){
 			case GS_MAINMENU:
 			{
 				// Initialize the main_menu if it is NULL
-				static bool first_frame_after_init = false;
 				if (!main_menu){
 					main_menu = initMainMenu();
 					quit_btn = initMainMenuQuitBtn();
-					first_frame_after_init = true;
 				}
 
 				gfx->renderClear();
 				SDL_Event event;
-				bool had_events = false;
 
 				// Handle menu input
 				while (SDL_PollEvent(&event)){
-					had_events = true;
 					handleMainMenuInputs(gfx.get(), event);
 					main_menu->handleEvents(&event);
 					quit_btn->handleEvents(&event);
-				}
-				
-				// Also check mouse position without events to catch hover on first load
-				// Only check on first frame after menu init and if no real events were processed
-				if (first_frame_after_init && !had_events){
-					SDL_Event dummy_event;
-					dummy_event.type = 0;
-					main_menu->handleEvents(&dummy_event);
-					quit_btn->handleEvents(&dummy_event);
-					first_frame_after_init = false;
 				}
 
 				gfx->renderText("Snake++", 
@@ -203,48 +189,44 @@ int main(int argc, char *argv[]){
 							g_gamemaster->game_over = true;
 							std::cout << "Snake committed sudoku\n";
 						}
-					}
 
-					// Check for game over and play explosion sound (outside tick check to catch wall collisions)
-					if (g_gamemaster->game_over){
-						// Play death sound (only once per game over)
-						#ifndef EMSCRIPTEN
-						if (!g_gamemaster->explosion_sound_played && g_soundmaster && !g_soundmaster->isMuted() && g_soundmaster->getSound(S_EXPLOSION)){
-							Mix_PlayChannel(-1, g_soundmaster->getSound(S_EXPLOSION), 0);
-							g_gamemaster->explosion_sound_played = true;
+						if (g_gamemaster->game_over){
+							#ifndef EMSCRIPTEN
+							if (g_soundmaster && !g_soundmaster->isMuted() && g_soundmaster->getSound(S_EXPLOSION))
+								Mix_PlayChannel(-1, g_soundmaster->getSound(S_EXPLOSION), 0);
+							#endif
+							
+							if (snake->length() == 2) // English majors be like
+								std::cout << "Game over! Your snake died after eating 1 apple.\n";
+							else
+								std::cout << "Game over! Your snake died after eating " << snake->length()-1 << " apples.\n";
+							
+							// If coll wasn't set, then the gameover location must be at the snake's head's previous location
+							if (!coll)
+								coll = &prev;
+
+							g_gamemaster->gstate = GS_MAINMENU;
+							g_gamemaster->game_over = g_gamemaster->is_paused = false;
+
+							gfx->renderFood(*food);
+							gfx->renderSnake(*snake);
+							gfx->renderGameover(prev);
+
+							// Render score
+							gfx->renderText(std::string("SCORE: " + std::to_string(snake->length()-1)),
+									(GRID_CELL_SIZE/2), (GRID_CELL_SIZE/2),
+									WHITE, F_SMALL
+							);
+
+							gfx->renderPresent();
+							// Update save file score
+							saveUpdate(g_gamemaster->level, snake->length()-1);
+							std::this_thread::sleep_for(std::chrono::seconds(2)); // Add some delay before game starts up again
+
+							snake->reset();
+							food->setRandPos();
+							continue;	
 						}
-						#endif
-						
-						if (snake->length() == 2) // English majors be like
-							std::cout << "Game over! Your snake died after eating 1 apple.\n";
-						else
-							std::cout << "Game over! Your snake died after eating " << snake->length()-1 << " apples.\n";
-						
-						// If coll wasn't set, then the gameover location must be at the snake's head's previous location
-						if (!coll)
-							coll = &prev;
-
-						g_gamemaster->gstate = GS_MAINMENU;
-						g_gamemaster->game_over = g_gamemaster->is_paused = false;
-
-						gfx->renderFood(*food);
-						gfx->renderSnake(*snake);
-						gfx->renderGameover(prev);
-
-						// Render score
-						gfx->renderText(std::string("SCORE: " + std::to_string(snake->length()-1)),
-								(GRID_CELL_SIZE/2), (GRID_CELL_SIZE/2),
-								WHITE, F_SMALL
-						);
-
-						gfx->renderPresent();
-						// Update save file score
-						saveUpdate(g_gamemaster->level, snake->length()-1);
-						std::this_thread::sleep_for(std::chrono::seconds(2)); // Add some delay before game starts up again
-
-						snake->reset();
-						food->setRandPos();
-						continue;	
 					}
 					
 					// Update direction only if we're in a game tick

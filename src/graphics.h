@@ -64,7 +64,7 @@ public:
 			  _font_type(font), 
 			  _hex_bgcolor(hex_bgcolor), _hex_fontcolor(hex_fontcolor), _hex_currcolor(hex_bgcolor), 
 			  _x_offset(x_offset), _y_offset(y_offset),
-			  _option(level), _mouse_left_hitbox(true), _button_click_processed(false){}
+			  _option(level), _mouse_left_hitbox(true){}
 	
 	~Button();
 
@@ -89,7 +89,6 @@ private:
 	float _x_offset, _y_offset;
 	int _option;
 	bool _mouse_left_hitbox; // Prevent mouse sounds from playing multiple times when hovering over button
-	bool _button_click_processed; // Prevent button click sound from playing multiple times
 };
 
 class Menu {
