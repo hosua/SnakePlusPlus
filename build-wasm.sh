@@ -7,6 +7,44 @@ BUILD_DIR="${SCRIPT_DIR}/build-wasm"
 ASSETS_DIR="${SCRIPT_DIR}/assets"
 SOURCES_DIR="${SCRIPT_DIR}/src"
 
+# Source shell configuration files to get PATH and aliases
+if [ -f ~/.bashrc ]; then
+    source ~/.bashrc 2>/dev/null || true
+fi
+if [ -f ~/.bash_profile ]; then
+    source ~/.bash_profile 2>/dev/null || true
+fi
+if [ -f ~/.profile ]; then
+    source ~/.profile 2>/dev/null || true
+fi
+
+# Try to find and add Emscripten to PATH if not already there
+if ! command -v emcc &> /dev/null; then
+    # Common Emscripten installation paths
+    for emsdk_path in \
+        "/usr/lib/emsdk/upstream/emscripten" \
+        "$HOME/emsdk/upstream/emscripten" \
+        "$HOME/.emsdk/upstream/emscripten" \
+        "/opt/emsdk/upstream/emscripten"; do
+        if [ -d "$emsdk_path" ] && [ -f "$emsdk_path/emcc" ]; then
+            export PATH="$PATH:$emsdk_path"
+            break
+        fi
+    done
+    
+    # Also try to source emsdk_env.sh if available
+    for emsdk_env in \
+        "$HOME/emsdk/emsdk_env.sh" \
+        "$HOME/.emsdk/emsdk_env.sh" \
+        "/opt/emsdk/emsdk_env.sh" \
+        "/usr/lib/emsdk/emsdk_env.sh"; do
+        if [ -f "$emsdk_env" ]; then
+            source "$emsdk_env" > /dev/null 2>&1
+            break
+        fi
+    done
+fi
+
 echo "Building Snake++ for WebAssembly with Emscripten..."
 
 if ! command -v emcc &> /dev/null; then
