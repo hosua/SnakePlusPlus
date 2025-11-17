@@ -7,7 +7,11 @@
 #include <fstream>
 #include <cstdint>
 
+#ifdef EMSCRIPTEN
+#define SAVE_PATH "/persistent/save.bin"
+#else
 #define SAVE_PATH "save.bin"
+#endif
 #define NUM_DIFFS 10 // Number of difficulties
 
 struct SaveData {

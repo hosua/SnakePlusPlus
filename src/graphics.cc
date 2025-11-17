@@ -51,6 +51,14 @@ void GFX::init(){
 		cleanQuit(false);
 	}
 
+	#ifdef EMSCRIPTEN
+	_renderer = SDL_CreateRenderer(_window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
+	if (!_renderer){
+		fprintf(stderr, "Fatal Error: Renderer failed to initialize\n");
+		fprintf(stderr, "SDL2 Error: %s\n", SDL_GetError());
+		cleanQuit(false);
+	}
+	#else
 	_renderer = SDL_CreateRenderer(_window, -1, SDL_RENDERER_ACCELERATED);
 	_surface = SDL_GetWindowSurface(_window);
 
@@ -59,6 +67,7 @@ void GFX::init(){
 		fprintf(stderr, "SDL2 Error: %s\n", SDL_GetError());
 		cleanQuit(false);
 	}
+	#endif
 
 	if (!initIMG())
 		cleanQuit(false);
@@ -142,6 +151,9 @@ void GFX::renderGameover(SDL_Rect pos) const {
 
 // Also limits FPS
 void GFX::renderPresent() const { 
+	#ifdef EMSCRIPTEN
+	SDL_RenderPresent(_renderer);
+	#else
 	static double clock = 0;
     double new_clock = SDL_GetTicks();
     double delta = (1000.0/FPS)-(new_clock-clock);
@@ -151,6 +163,7 @@ void GFX::renderPresent() const {
 
     clock = (delta < -30) ?  new_clock-30 : new_clock+delta;
 	SDL_RenderPresent(_renderer);
+	#endif
 }
 
 // Renders the text in a line (Does not handle wrapping)
@@ -210,7 +223,6 @@ void Button::handleEvents(SDL_Event* e){
 	if (e->type == SDL_MOUSEMOTION || e->type == SDL_MOUSEBUTTONDOWN || e->type == SDL_MOUSEBUTTONUP){
 		int mx, my;
 		SDL_GetMouseState(&mx, &my);
-		// printf("mouse: (%i,%i)\n", mx, my);
 
 		if (mx < rect.x) // mouse left of button
 			inside = SDL_FALSE;
@@ -230,8 +242,10 @@ void Button::handleEvents(SDL_Event* e){
 
 		if (_mouse_left_hitbox){ // Ensure sound only plays once until the mouse leaves the hitbox
 			_mouse_left_hitbox = false;
-			if (!g_soundmaster->isMuted() && g_soundmaster->getSound(S_MENUHOVER))
+			#ifndef EMSCRIPTEN
+			if (g_soundmaster && !g_soundmaster->isMuted() && g_soundmaster->getSound(S_MENUHOVER))
 				Mix_PlayChannel(-1, g_soundmaster->getSound(S_MENUHOVER), 0);
+			#endif
 			if (stringIsInt(txt)){
 				level = std::stoi(getText());
 				if (level > 0){
@@ -247,8 +261,10 @@ void Button::handleEvents(SDL_Event* e){
 		int opt = getOption();
 
 		if (e->type == SDL_MOUSEBUTTONDOWN){
-			if (!g_soundmaster->isMuted() && g_soundmaster->getSound(S_MENUSELECT))
+			#ifndef EMSCRIPTEN
+			if (g_soundmaster && !g_soundmaster->isMuted() && g_soundmaster->getSound(S_MENUSELECT))
 				Mix_PlayChannel(-1, g_soundmaster->getSound(S_MENUSELECT), 0);
+			#endif
 			// negative numbers are reserved for pause menu actions
 			if (opt < 0){	
 				// Cast int to PauseAction enum to make compiler happy

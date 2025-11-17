@@ -18,7 +18,7 @@ int main(int argc, char *argv[]){
 	
 	unsigned long long tick = 0;
 
-	if (SDL_Init(SDL_INIT_EVERYTHING)){ 
+	if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO)){ 
 		fprintf(stderr, "Fatal error: Failed to initialize SDL: %s\n", SDL_GetError());
 		exit(EXIT_FAILURE);
 	}
@@ -28,13 +28,19 @@ int main(int argc, char *argv[]){
 		exit(EXIT_FAILURE);
 	if (!initFonts())
 		exit(EXIT_FAILURE);
+	#ifndef EMSCRIPTEN
 	initSounds(); // If sounds fail to load, game should still be playable so no need to exit here.
+	#endif
 	
 	// Save data
 	if (!(g_savedata = saveLoad()))
 		saveInit();
 	// Sounds
+	#ifndef EMSCRIPTEN
 	g_soundmaster = std::unique_ptr<SoundMaster>(new SoundMaster());
+	#else
+	g_soundmaster = nullptr;
+	#endif
 	
 	// Graphics
 	std::unique_ptr<GFX> gfx = std::unique_ptr<GFX>(new GFX());
@@ -107,16 +113,18 @@ int main(int argc, char *argv[]){
 				);
 				
 				// Render icon based on if sound is muted or unmuted
-				if (g_soundmaster->isMuted())
+				#ifndef EMSCRIPTEN
+				if (g_soundmaster && g_soundmaster->isMuted())
 					gfx->blitImage(IMG_AUDIO_OFF, 
 						SCREEN_W - (GRID_CELL_SIZE*2.5f), (GRID_CELL_SIZE/2),
 						ICON_SIZE, ICON_SIZE
 					);
-				else
+				else if (g_soundmaster)
 					gfx->blitImage(IMG_AUDIO_ON, 
 						SCREEN_W - (GRID_CELL_SIZE*2.5f), (GRID_CELL_SIZE/2),
 						ICON_SIZE, ICON_SIZE
 					);
+				#endif
 
 				// Render high score
 				if (!g_gamemaster->buff_str.empty())
@@ -138,6 +146,7 @@ int main(int argc, char *argv[]){
 					delete main_menu;
 					delete quit_btn;
 					main_menu = nullptr;
+					quit_btn = nullptr;
 				}
 
 				SDL_Event event;
@@ -167,8 +176,10 @@ int main(int argc, char *argv[]){
 								std::cout << "Snake has eaten 1 apple!\n";
 							else
 								std::cout << "Snake has eaten " << snake->length()-1 << " apples!\n";
-							if (!g_soundmaster->isMuted() && g_soundmaster->getSound(S_EAT))
+							#ifndef EMSCRIPTEN
+							if (g_soundmaster && !g_soundmaster->isMuted() && g_soundmaster->getSound(S_EAT))
 								Mix_PlayChannel(-1, g_soundmaster->getSound(S_EAT), 0);
+							#endif
 						}
 
 						snake->handleMovement();
@@ -179,11 +190,12 @@ int main(int argc, char *argv[]){
 							std::cout << "Snake committed sudoku\n";
 						}
 
-
 						if (g_gamemaster->game_over){
-							// Play death sound
-							if (!g_soundmaster->isMuted() && g_soundmaster->getSound(S_EXPLOSION))
-								Mix_PlayChannel(-1, g_soundmaster->getSound(S_EXPLOSION), 0); 
+							#ifndef EMSCRIPTEN
+							if (g_soundmaster && !g_soundmaster->isMuted() && g_soundmaster->getSound(S_EXPLOSION))
+								Mix_PlayChannel(-1, g_soundmaster->getSound(S_EXPLOSION), 0);
+							#endif
+							
 							if (snake->length() == 2) // English majors be like
 								std::cout << "Game over! Your snake died after eating 1 apple.\n";
 							else
@@ -215,6 +227,10 @@ int main(int argc, char *argv[]){
 							food->setRandPos();
 							continue;	
 						}
+					}
+					
+					// Update direction only if we're in a game tick
+					if (g_gamemaster->cd_counter < 0 && (tick % g_gamemaster->option == 0)){
 						snake->updateDir();
 					}
 
@@ -269,16 +285,18 @@ int main(int argc, char *argv[]){
 					);
 
 					// Render icon based on if sound is muted or unmuted
-					if (g_soundmaster->isMuted())
+					#ifndef EMSCRIPTEN
+					if (g_soundmaster && g_soundmaster->isMuted())
 						gfx->blitImage(IMG_AUDIO_OFF, 
 							SCREEN_W - (GRID_CELL_SIZE*2.5f), (GRID_CELL_SIZE/2),
 							ICON_SIZE, ICON_SIZE
 						);
-					else
+					else if (g_soundmaster)
 						gfx->blitImage(IMG_AUDIO_ON, 
 							SCREEN_W - (GRID_CELL_SIZE*2.5f), (GRID_CELL_SIZE/2),
 							ICON_SIZE, ICON_SIZE
 						);
+					#endif
 				} // End if(g_gamemaster->is_paused())
 
 				gfx->renderPresent();
@@ -315,10 +333,14 @@ void handleIngameInputs(GFX* gfx, Snake* snake, SDL_Event event){
 				case SDLK_d: case SDLK_RIGHT:
 					snake->setBuffDir(M_RIGHT);
 					break;
+				#ifndef EMSCRIPTEN
 				case SDLK_m: // Mute/unmute sound
-					g_soundmaster->toggleMuted();
-					(g_soundmaster->isMuted()) ? std::cout << "Sound muted\n" : std::cout << "Sound unmuted\n";
+					if (g_soundmaster){
+						g_soundmaster->toggleMuted();
+						(g_soundmaster->isMuted()) ? std::cout << "Sound muted\n" : std::cout << "Sound unmuted\n";
+					}
 					break;
+				#endif
 			}
 		break;
 	}
@@ -332,12 +354,16 @@ void handlePauseInputs(GFX* gfx, SDL_Event event){
 	}
 	switch(event.type){
 		case SDL_KEYDOWN:
+			#ifndef EMSCRIPTEN
 			switch(event.key.keysym.sym){
 				case SDLK_m: // Mute/unmute sound
-					g_soundmaster->toggleMuted();
-					(g_soundmaster->isMuted()) ? std::cout << "Sound muted\n" : std::cout << "Sound unmuted\n";
+					if (g_soundmaster){
+						g_soundmaster->toggleMuted();
+						(g_soundmaster->isMuted()) ? std::cout << "Sound muted\n" : std::cout << "Sound unmuted\n";
+					}
 					break;
 			}
+			#endif
 		break;
 	}
 }
@@ -345,18 +371,29 @@ void handlePauseInputs(GFX* gfx, SDL_Event event){
 // Handles main menu keyboard input
 void handleMainMenuInputs(GFX* gfx, SDL_Event event){
 	// If user presses ESC while in the menu, quit the game
+	// Disable ESC quit for Emscripten/web builds
+	#ifndef EMSCRIPTEN
 	if (event.type == SDL_QUIT ||
 			(event.type == SDL_KEYDOWN && event.key.keysym.sym == SDLK_ESCAPE))
 		gfx->cleanQuit();
+	#else
+	// In web builds, only handle window close, not ESC key
+	if (event.type == SDL_QUIT)
+		gfx->cleanQuit();
+	#endif
 
 	switch(event.type){ // Allow player to mute/unmute in main menu
 		case SDL_KEYDOWN:
+			#ifndef EMSCRIPTEN
 			switch(event.key.keysym.sym){
 				case SDLK_m: // Mute/unmute sound
-					g_soundmaster->toggleMuted();
-					(g_soundmaster->isMuted()) ? std::cout << "Sound muted\n" : std::cout << "Sound unmuted\n";
+					if (g_soundmaster){
+						g_soundmaster->toggleMuted();
+						(g_soundmaster->isMuted()) ? std::cout << "Sound muted\n" : std::cout << "Sound unmuted\n";
+					}
 					break;
 			}
+			#endif
 		break;
 	}
 }
