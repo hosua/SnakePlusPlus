@@ -98,8 +98,9 @@ struct GameMaster {
 	bool cd_started; // Indicate the cooldown is starting
 	int cd_counter; // Keeps track of how many seconds remain before gameplay resumes/starts
 	std::vector<TTF_Font*> fonts;
+	bool explosion_sound_played; // Track if explosion sound has been played for current game over
 
-	void resetGame(){ gstate = GS_MAINMENU; reset = game_over, is_paused = false; }
+	void resetGame(){ gstate = GS_MAINMENU; reset = game_over, is_paused = false; explosion_sound_played = false; }
 
 	void startCD(){ // Should call this function when game starts or resumes from pause
 		is_paused = false;
@@ -108,7 +109,7 @@ struct GameMaster {
 	}
 
 	GameMaster(): gstate(GS_MAINMENU), buff_str(""), level(0), reset(false), is_running(true), game_over(false), 
-	is_paused(false), cd_started(false), cd_counter(0){}
+	is_paused(false), cd_started(false), cd_counter(0), explosion_sound_played(false){}
 };
 
 extern std::unique_ptr<GameMaster> g_gamemaster; // Global game master

@@ -1,0 +1,52 @@
+cmake_minimum_required(VERSION 3.10)
+project(snakepp LANGUAGES CXX)
+
+set(TARGET snake++)
+
+set(SOURCEDIR "${CMAKE_SOURCE_DIR}/src")
+file(GLOB SOURCES "${SOURCEDIR}/*.cc")
+
+include_directories(${SOURCEDIR})
+
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}/build-wasm")
+
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+set(CMAKE_SYSTEM_NAME Emscripten)
+set(CMAKE_C_COMPILER emcc)
+set(CMAKE_CXX_COMPILER em++)
+
+set(ASSETS_SRC "${CMAKE_SOURCE_DIR}/assets")
+set(ASSETS_DEST "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/assets")
+
+set(EMSCRIPTEN_FLAGS
+    -s USE_SDL=2
+    -s USE_SDL_TTF=2
+    -s USE_SDL_MIXER=2
+    -s USE_SDL_IMAGE=2
+    -s SDL2_IMAGE_FORMATS='["png"]'
+    -s ALLOW_MEMORY_GROWTH=1
+    -s INITIAL_MEMORY=67108864
+    -s USE_WEBGL2=1
+    -s FULL_ES3=1
+    -O2
+    --preload-file "${ASSETS_SRC}@/assets"
+    --use-preload-plugins
+    -s EXPORTED_RUNTIME_METHODS='["ccall","cwrap","FS"]'
+    -s EXPORTED_FUNCTIONS='["_main","_malloc","_free"]'
+    -s ASYNCIFY
+    --shell-file "${CMAKE_SOURCE_DIR}/shell.html"
+    -o "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/snake++.html"
+)
+
+add_executable(${TARGET} ${SOURCES})
+
+target_link_options(${TARGET} PRIVATE ${EMSCRIPTEN_FLAGS})
+
+add_custom_command(TARGET ${TARGET} POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_directory
+            "${ASSETS_SRC}" "${ASSETS_DEST}"
+    COMMENT "Copying assets to build directory..."
+)
+

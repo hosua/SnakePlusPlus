@@ -3,3 +3,4 @@ objs/
 save.bin
 windows/save.bin
 build/
+build-wasm/
