@@ -3,7 +3,7 @@
 set -e
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-BUILD_DIR="${SCRIPT_DIR}/build-wasm"
+BUILD_DIR="${SCRIPT_DIR}/build"
 ASSETS_DIR="${SCRIPT_DIR}/assets"
 SOURCES_DIR="${SCRIPT_DIR}/src"
 
