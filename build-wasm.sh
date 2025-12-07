@@ -19,7 +19,7 @@ if [ -f ~/.profile ]; then
 fi
 
 # Try to find and add Emscripten to PATH if not already there
-if ! command -v emcc &> /dev/null; then
+if ! command -v emcc &>/dev/null; then
     # Common Emscripten installation paths
     for emsdk_path in \
         "/usr/lib/emsdk/upstream/emscripten" \
@@ -31,7 +31,7 @@ if ! command -v emcc &> /dev/null; then
             break
         fi
     done
-    
+
     # Also try to source emsdk_env.sh if available
     for emsdk_env in \
         "$HOME/emsdk/emsdk_env.sh" \
@@ -39,7 +39,7 @@ if ! command -v emcc &> /dev/null; then
         "/opt/emsdk/emsdk_env.sh" \
         "/usr/lib/emsdk/emsdk_env.sh"; do
         if [ -f "$emsdk_env" ]; then
-            source "$emsdk_env" > /dev/null 2>&1
+            source "$emsdk_env" >/dev/null 2>&1
             break
         fi
     done
@@ -47,7 +47,7 @@ fi
 
 echo "Building Snake++ for WebAssembly with Emscripten..."
 
-if ! command -v emcc &> /dev/null; then
+if ! command -v emcc &>/dev/null; then
     echo "Error: emcc not found. Please install Emscripten SDK."
     echo "Visit: https://emscripten.org/docs/getting_started/downloads.html"
     exit 1
@@ -82,6 +82,8 @@ emcc \
     -o "${BUILD_DIR}/snake++.html" \
     -Wall
 
+cp index.html "${BUILD_DIR}/"
+
 echo "Copying assets..."
 cp -r "${ASSETS_DIR}" "${BUILD_DIR}/" || true
 
@@ -93,4 +95,3 @@ echo "To serve locally (required for file system access):"
 echo "  cd ${BUILD_DIR}"
 echo "  python3 -m http.server 8000"
 echo "  Then open http://localhost:8000/snake++.html"
-
